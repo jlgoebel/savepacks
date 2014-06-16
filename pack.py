@@ -18,6 +18,7 @@ def MainMenu():
 	2. View card list.
 	3. Import card list.
 	4. View statistics.
+	M. File management.
 	T. Choose a card!
 	Q. Quit
 	"""
@@ -32,13 +33,20 @@ def MainMenu():
 	elif choice == "3":
 		ImportList()
 		MainMenu()
+	elif choice == "4":
+		ViewStats()
+		MainMenu()
 	elif choice.lower() == "t":
 		SelectCard()
+		MainMenu()
+	elif choice.lower() == "m":
+		FileManage()
 		MainMenu()
 	elif choice.lower() == "q":
 		exit()
 	else:
 		print "That isn't a valid option."
+		MainMenu()
 	
 def ImportList():
 	with open(CARDLIST,"r") as csvfile:
@@ -57,7 +65,6 @@ def ImportList():
 			carddict[cardname] = rarity
 			currentcard[1] = rarity
 
-
 def PrintCardList():
 	for name, rarity in carddict.items():
 		print "%r, (%r)" % (name, rarity)
@@ -72,9 +79,7 @@ def SelectCard():
 	
 	with open(CARDLIST,"r") as csvfile:
 		cards = csv.reader(csvfile, delimiter = ",")
-		
-		
-		
+				
 		for row in cards:
 			currentcard = ' '.join(row)
 			currentcard = currentcard.split()
@@ -108,39 +113,55 @@ def EnterNewPack():
 		print "You need to enter %d more card(s). Type 'q' to quit." % (5 - len(newpack))
 		entry = raw_input("Card: ")
 		entry = entry.lower()
-
+		validate = CheckForCard(entry) # determine if it's found, found/foil, or not found
+		
 		if entry == "q":
 			print "No pack added. Returning to Main Menu."
 			MainMenu()
-		elif CheckForCard(entry) == 1:
+		elif validate == 1 or validate == 2:
 			newpack.append(entry)
 			print "Added %r." % entry
 			if len(newpack) == 5:
 				print "You've added five cards!"
-				print "Here's the pack:"
-				for y in newpack:
-					print y
+				SavePackToFile(newpack)
 		else:
 			print "That isn't a valid card"
+
+def SavePackToFile(pack):
+	#saves the pack to the csv file
+	print "Here's the pack you entered."
+	for y in pack:
+		print y
+		
+	confirm = raw_input("Save to file? (Y to confirm): ")
+	confirm = confirm.lower()
 	
-	
-	
-	
-	
+	if confirm == "y":
+		with open(SAVEDPACKS,"a") as csvfile:
+			writepacks = csv.writer(csvfile, delimiter=',')
+			writepacks.writerow([pack[0], pack[1], pack[2], pack[3], pack[4]]) #write the five cards to a new row in the file	
+	else:
+		print "Pack not saved. Returning to main menu."
+			
 def CheckForCard(entry):
 	#returns 1 if the card is in the list
+	#return 2 if the card is foil
 	selection = entry
 	selection = selection.lower()
 	current = ""
 	found = 0
+	foil = 0
 	
 	PrintStars(5)
 	
+	#first, let's find out if the card is foil (has an * in front)
+	if selection[0] == "*":
+		foil = 1
+		selection = selection[1:len(selection)] #removes the * from the entry
+	
 	with open(CARDLIST,"r") as csvfile:
 		cards = csv.reader(csvfile, delimiter = ",")
-		
-		
-		
+				
 		for row in cards:
 			currentcard = ' '.join(row)
 			currentcard = currentcard.split()
@@ -152,10 +173,16 @@ def CheckForCard(entry):
 			cardname = " ".join(currentcard[0])
 			cardname = cardname.lower()
 					
-			if cardname == selection:
+			if cardname == selection:				
 				found = 1 #indicates we found the card
-				return 1
-				break
+				
+				if foil == 1:
+					print "Card registered as golden."
+					return 2 #returns 2 if it finds the card and it's foil
+					break
+				else:
+					return 1 #returns 1 if it finds a matching card
+					break
 	
 	if found == 0:
 		return 0 #returns 0 if no card is found
@@ -164,8 +191,57 @@ def CheckForCard(entry):
 	
 def PrintStars(n):
 	print "*" * n
+
+def FileManage():
+	print """
+	Choose from the options below.
+	1. Clear saved packs.
+	Q. Return to main menu.
+	"""
+	choice = raw_input("Choose an option: ")
 	
+	if choice == "1":
+		confirm = raw_input("Are you sure? (Y to confirm): ")
+		confirm = confirm.lower()
+		
+		if confirm =="y":
+			f = open(SAVEDPACKS, "w+")
+			f.close()
+			print "File cleared. Returning to main menu."
+		else:
+			print "No action taken."
+			FileManage()
 	
+	elif choice.lower() == "q":
+		print "Returning to main menu."
+	
+	else:
+		print "Not a valid option."
+		FileManage()
+
+def ViewStats():
+	print """
+	Choose from the options below.
+	1. View pack history.
+	Q. Return to main menu.
+	"""
+	choice = raw_input("Choose an option: ")
+	
+	if choice == "1":
+		PackHistory()
+		ViewStats()
+	elif choice.lower() == "q":
+		print "Returning to main menu."
+	else:
+		print "Not a valid option."
+		ViewStats()
+
+def PackHistory():
+	with open(SAVEDPACKS,"r") as csvfile:
+		packs = csv.reader(csvfile, delimiter = ',')
+		for row in packs:
+			print ', '.join(row)
+		
 #Let's get it started!
 ImportList()
 MainMenu()
